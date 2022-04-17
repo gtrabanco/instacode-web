@@ -1,0 +1,52 @@
+version: '3.7'
+
+services:
+  backend_database:
+    image: mongo
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodatabase:/data/db
+    networks:
+      - instacodebackend
+  backend_web:
+    depends_on:
+      - backend_database
+    build:
+      context: 'https://github.com/gtrabanco/server-instacode.git#improve_docker'
+      dockerfile: Dockerfile
+    links:
+      - backend_database:db
+    environment:
+      - MONGO_URI=mongodb://db/instacode
+      - PORT=3000
+      - NODE_ENV=development
+      - JWT_SECRET=secret
+    networks:
+      - instacodebackend
+    volumes:
+      - nodemodules:/usr/src/app/node_modules
+    command: npm run start
+  frontend:
+    depends_on:
+      - backend_web
+    links:
+      - backend_web:apiurl
+    build: .
+    environment:
+      - VITE_API_BASE_URL=http://apiurl:3000/api
+      - NODE_ENV=development
+    ports:
+      - 3000:3000
+    command: npm run dev -- --host
+    networks:
+      - instacodebackend
+
+networks:
+  instacodebackend:
+    name: instacodebackend
+    external: false
+volumes:
+  nodemodules:
+    driver: local
+  mongodatabase:
